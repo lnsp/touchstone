@@ -3,11 +3,13 @@ package framework
 import (
 	internalapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/kubelet/remote"
+	"github.com/pkg/errors"
+	"time"
 )
 
 type APIClient struct {
-	Runtime *internalapi.RuntimeServiceClient
-	Image   *internalapi.ImageServiceClient
+	Runtime internalapi.RuntimeServiceClient
+	Image   internalapi.ImageServiceClient
 }
 
 func NewClient(addr string) (*APIClient, error) {
@@ -21,7 +23,7 @@ func NewClient(addr string) (*APIClient, error) {
 	}
 	runtimeClient := &APIClient{
 		Runtime: runtimeSvc,
-		Image: imageSvc,
+		Image:   imageSvc,
 	}
 	return runtimeClient, nil
 }
