@@ -72,12 +72,19 @@ func (api *APIClient) StartSandbox(sandbox *runtimeapi.PodSandboxConfig) (string
 }
 
 // StopAndRemoveSandbox stops and removes the given pod sandbox.
-func (api *APIClient) StopAndRemoveSandbox(pod string) error {
-	err := api.Runtime.StopPodSandbox(pod)
-	if err != nil {
-		return err
+func (api *APIClient) StopAndRemoveSandbox(pod string) (err error) {
+	for attempt := 0; attempt < 10; attempt++ {
+		err = api.Runtime.StopPodSandbox(pod)
+		if err != nil {
+			continue
+		}
+		err = api.Runtime.RemovePodSandbox(pod)
+		if err != nil {
+			continue
+		}
+		return nil
 	}
-	return api.Runtime.RemovePodSandbox(pod)
+	return errors.Errorf("stop and remove failed: %v", err)
 }
 
 // InitLinuxSandbox creates a new pod sandbox configuration.
