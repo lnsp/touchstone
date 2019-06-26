@@ -24,6 +24,7 @@ var versionCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(runCmd)
+	rootCmd.PersistentFlags().String("endpoint", "unix:///var/run/containerd/containerd.sock", "CRI endpoint")
 }
 
 // Execute runs the command executor.

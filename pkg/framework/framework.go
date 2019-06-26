@@ -1,15 +1,16 @@
 package framework
 
 import (
-	internalapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-	"k8s.io/kubernetes/pkg/kubelet/remote"
-	"github.com/pkg/errors"
 	"time"
+
+	"github.com/pkg/errors"
+	internalapi "k8s.io/cri-api/pkg/apis"
+	"k8s.io/kubernetes/pkg/kubelet/remote"
 )
 
 type APIClient struct {
-	Runtime internalapi.RuntimeServiceClient
-	Image   internalapi.ImageServiceClient
+	Runtime internalapi.RuntimeService
+	Image   internalapi.ImageManagerService
 }
 
 func NewClient(addr string) (*APIClient, error) {
