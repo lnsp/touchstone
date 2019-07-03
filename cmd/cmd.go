@@ -21,10 +21,16 @@ var versionCmd = &cobra.Command{
 	},
 }
 
+var (
+	cri, handler string
+)
+
 func init() {
 	rootCmd.AddCommand(versionCmd)
-	rootCmd.AddCommand(runCmd)
-	rootCmd.PersistentFlags().String("endpoint", "unix:///var/run/containerd/containerd.sock", "CRI endpoint")
+	rootCmd.AddCommand(initCmd)
+	rootCmd.AddCommand(benchmarkCmd)
+	rootCmd.PersistentFlags().StringVarP(&cri, "cri", "c", "containerd", "CRI runtime")
+	rootCmd.PersistentFlags().StringVarP(&handler, "runtime-handler", "r", "runc", "OCI handler")
 }
 
 // Execute runs the command executor.

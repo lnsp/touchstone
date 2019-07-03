@@ -1,4 +1,4 @@
-package framework
+package runtime
 
 import (
 	"strings"
@@ -11,6 +11,9 @@ import (
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
 	"k8s.io/kubernetes/pkg/kubelet/remote"
 )
+
+const maxRemovalAttempts = 10
+const maxRemovalTimeout = 10
 
 var uuidLock sync.Mutex
 var lastUUID uuid.UUID
@@ -30,8 +33,8 @@ func NewUUID() string {
 
 const defaultNamespace = "touchstone"
 
-// APIClient is an implementation of a CRI API client.
-type APIClient struct {
+// Client is an implementation of a CRI API client.
+type Client struct {
 	Runtime internalapi.RuntimeService
 	Image   internalapi.ImageManagerService
 }
@@ -39,7 +42,7 @@ type APIClient struct {
 var defaultLinuxPodLabels = map[string]string{}
 
 // CreateContainer runs a container image. It returns the container ID.
-func (api *APIClient) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, name, image string, command []string) (string, error) {
+func (api *Client) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, name, image string, command []string) (string, error) {
 	container := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
 			Name:    name,
@@ -57,23 +60,39 @@ func (api *APIClient) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod,
 }
 
 // StartContainer starts a new container instance.
-func (api *APIClient) StartContainer(container string) error {
+func (api *Client) StartContainer(container string) error {
 	return api.Runtime.StartContainer(container)
 }
 
 // StopContainer stops the container instance.
-func (api *APIClient) StopContainer(container string) error {
-	return api.Runtime.StopContainer(container, 60)
+func (api *Client) StopContainer(container string) error {
+	return api.Runtime.StopContainer(container, maxRemovalTimeout)
 }
 
 // StartSandbox starts up the pod sandbox. It returns the pod sandbox ID.
-func (api *APIClient) StartSandbox(sandbox *runtimeapi.PodSandboxConfig) (string, error) {
-	return api.Runtime.RunPodSandbox(sandbox, "")
+func (api *Client) StartSandbox(sandbox *runtimeapi.PodSandboxConfig, runtime string) (string, error) {
+	return api.Runtime.RunPodSandbox(sandbox, runtime)
+}
+
+// StopAndRemoveContainer stops and removes a container.
+func (api *Client) StopAndRemoveContainer(container string) (err error) {
+	for attempt := 0; attempt < maxRemovalAttempts; attempt++ {
+		err = api.Runtime.StopContainer(container, maxRemovalTimeout)
+		if err != nil {
+			continue
+		}
+		err = api.Runtime.RemoveContainer(container)
+		if err != nil {
+			continue
+		}
+		return nil
+	}
+	return errors.Errorf("stop-remove container failed: %v", err)
 }
 
 // StopAndRemoveSandbox stops and removes the given pod sandbox.
-func (api *APIClient) StopAndRemoveSandbox(pod string) (err error) {
-	for attempt := 0; attempt < 10; attempt++ {
+func (api *Client) StopAndRemoveSandbox(pod string) (err error) {
+	for attempt := 0; attempt < maxRemovalAttempts; attempt++ {
 		err = api.Runtime.StopPodSandbox(pod)
 		if err != nil {
 			continue
@@ -84,17 +103,17 @@ func (api *APIClient) StopAndRemoveSandbox(pod string) (err error) {
 		}
 		return nil
 	}
-	return errors.Errorf("stop and remove failed: %v", err)
+	return errors.Errorf("stop-remove pod failed: %v", err)
 }
 
 // InitLinuxSandbox creates a new pod sandbox configuration.
-func (api *APIClient) InitLinuxSandbox(name string) *runtimeapi.PodSandboxConfig {
+func (api *Client) InitLinuxSandbox(name string) *runtimeapi.PodSandboxConfig {
 	return &runtimeapi.PodSandboxConfig{
 		Metadata: &runtimeapi.PodSandboxMetadata{
 			Name:      name,
 			Uid:       NewUUID(),
 			Namespace: defaultNamespace,
-			Attempt:   0,
+			Attempt:   1,
 		},
 		Linux:  &runtimeapi.LinuxPodSandboxConfig{},
 		Labels: defaultLinuxPodLabels,
@@ -102,7 +121,7 @@ func (api *APIClient) InitLinuxSandbox(name string) *runtimeapi.PodSandboxConfig
 }
 
 // PullImage instructs the CRI to pull an image from a public repository.
-func (api *APIClient) PullImage(image string, sandbox *runtimeapi.PodSandboxConfig) error {
+func (api *Client) PullImage(image string, sandbox *runtimeapi.PodSandboxConfig) error {
 	if !strings.Contains(image, ":") {
 		image = image + ":latest"
 	}
@@ -116,8 +135,12 @@ func (api *APIClient) PullImage(image string, sandbox *runtimeapi.PodSandboxConf
 	return nil
 }
 
+func (api *Client) Close() {
+	// TODO: close TCP connections
+}
+
 // NewClient instantiates a new API client.
-func NewClient(addr string) (*APIClient, error) {
+func NewClient(addr string) (*Client, error) {
 	runtimeSvc, err := remote.NewRemoteRuntimeService(addr, time.Minute)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect")
@@ -126,7 +149,7 @@ func NewClient(addr string) (*APIClient, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to connect")
 	}
-	runtimeClient := &APIClient{
+	runtimeClient := &Client{
 		Runtime: runtimeSvc,
 		Image:   imageSvc,
 	}

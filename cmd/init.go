@@ -3,19 +3,19 @@ package cmd
 import (
 	"time"
 
-	"github.com/lnsp/touchstone/pkg/framework"
+	"github.com/lnsp/touchstone/pkg/runtime"
+	"github.com/lnsp/touchstone/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
 const sampleLinuxImage = "docker.io/library/busybox:latest"
 
-var runCmd = &cobra.Command{
-	Use:   "run",
-	Short: "Run the benchmark suite.",
+var initCmd = &cobra.Command{
+	Use:   "init",
+	Short: "Initialize the benchmark suite.",
 	Run: func(cmd *cobra.Command, args []string) {
-		endpoint, _ := cmd.Flags().GetString("endpoint")
-		client, err := framework.NewClient(endpoint)
+		client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
 		if err != nil {
 			logrus.WithError(err).Fatal("failed to create client")
 		}
@@ -23,8 +23,8 @@ var runCmd = &cobra.Command{
 			logrus.Fatal(err)
 		}
 		logrus.Info("pulled busybox image from Docker Hub")
-		sandbox := client.InitLinuxSandbox("busybox-" + framework.NewUUID())
-		pod, err := client.StartSandbox(sandbox)
+		sandbox := client.InitLinuxSandbox("busybox-" + runtime.NewUUID())
+		pod, err := client.StartSandbox(sandbox, handler)
 		if err != nil {
 			logrus.WithError(err).Fatal("failed to create sandbox")
 		}
@@ -37,7 +37,7 @@ var runCmd = &cobra.Command{
 		if err := client.StartContainer(container); err != nil {
 			logrus.WithError(err).Fatal("failed to start container")
 		}
-		<-time.After(time.Minute)
+		<-time.After(time.Second * 60)
 		if err := client.StopContainer(container); err != nil {
 			logrus.WithError(err).Fatal("failed to stop container")
 		}
