@@ -3,6 +3,7 @@ package runtime
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"os"
@@ -13,9 +14,8 @@ import (
 	"github.com/pborman/uuid"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
-	internalapi "k8s.io/cri-api/pkg/apis"
+	"google.golang.org/grpc"
 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1alpha2"
-	"k8s.io/kubernetes/pkg/kubelet/remote"
 )
 
 const maxRemovalAttempts = 10
@@ -41,8 +41,8 @@ const defaultNamespace = "touchstone"
 
 // Client is an implementation of a CRI API client.
 type Client struct {
-	Runtime internalapi.RuntimeService
-	Image   internalapi.ImageManagerService
+	Runtime runtimeapi.RuntimeServiceClient
+	Image   runtimeapi.ImageServiceClient
 }
 
 var defaultLinuxPodLabels = map[string]string{}
@@ -63,7 +63,16 @@ func (api *Client) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, na
 	if command != nil {
 		container.Command = command
 	}
-	return api.Runtime.CreateContainer(pod, container, sandbox)
+	req := &runtimeapi.CreateContainerRequest{
+		PodSandboxId:  pod,
+		Config:        container,
+		SandboxConfig: sandbox,
+	}
+	resp, err := api.Runtime.CreateContainer(context.Background(), req)
+	if err != nil {
+		return "", err
+	}
+	return resp.ContainerId, nil
 }
 
 // WaitForLogs waits for the container to exit and returns the logs as a slice of bytes.
@@ -119,32 +128,69 @@ func (api *Client) Logs(container string, writer io.Writer) error {
 
 // Status fetches the status of a container.
 func (api *Client) Status(container string) (*runtimeapi.ContainerStatus, error) {
-	return api.Runtime.ContainerStatus(container)
+	resp, err := api.Runtime.ContainerStatus(context.Background(), &runtimeapi.ContainerStatusRequest{
+		ContainerId: container,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp.Status, nil
 }
 
 // StartContainer starts a new container instance.
 func (api *Client) StartContainer(container string) error {
-	return api.Runtime.StartContainer(container)
+	_, err := api.Runtime.StartContainer(context.Background(), &runtimeapi.StartContainerRequest{
+		ContainerId: container,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // StopContainer stops the container instance.
-func (api *Client) StopContainer(container string) error {
-	return api.Runtime.StopContainer(container, maxRemovalTimeout)
+func (api *Client) StopContainer(container string, timeout int) error {
+	_, err := api.Runtime.StopContainer(context.Background(), &runtimeapi.StopContainerRequest{
+		ContainerId: container,
+		Timeout:     int64(timeout),
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveContainer stops the container instance.
+func (api *Client) RemoveContainer(container string) error {
+	_, err := api.Runtime.RemoveContainer(context.Background(), &runtimeapi.RemoveContainerRequest{
+		ContainerId: container,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 // StartSandbox starts up the pod sandbox. It returns the pod sandbox ID.
 func (api *Client) StartSandbox(sandbox *runtimeapi.PodSandboxConfig, runtime string) (string, error) {
-	return api.Runtime.RunPodSandbox(sandbox, runtime)
+	resp, err := api.Runtime.RunPodSandbox(context.Background(), &runtimeapi.RunPodSandboxRequest{
+		Config:         sandbox,
+		RuntimeHandler: runtime,
+	})
+	if err != nil {
+		return "", err
+	}
+	return resp.PodSandboxId, nil
 }
 
 // StopAndRemoveContainer stops and removes a container.
 func (api *Client) StopAndRemoveContainer(container string) (err error) {
 	for attempt := 0; attempt < maxRemovalAttempts; attempt++ {
-		err = api.Runtime.StopContainer(container, maxRemovalTimeout)
+		err = api.StopContainer(container, maxRemovalTimeout)
 		if err != nil {
 			continue
 		}
-		err = api.Runtime.RemoveContainer(container)
+		err = api.RemoveContainer(container)
 		if err != nil {
 			continue
 		}
@@ -153,14 +199,36 @@ func (api *Client) StopAndRemoveContainer(container string) (err error) {
 	return errors.Errorf("stop-remove container failed: %v", err)
 }
 
+// StopSandbox stops the container instance.
+func (api *Client) StopSandbox(pod string) error {
+	_, err := api.Runtime.StopPodSandbox(context.Background(), &runtimeapi.StopPodSandboxRequest{
+		PodSandboxId: pod,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RemoveSandbox stops the container instance.
+func (api *Client) RemoveSandbox(pod string) error {
+	_, err := api.Runtime.RemovePodSandbox(context.Background(), &runtimeapi.RemovePodSandboxRequest{
+		PodSandboxId: pod,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // StopAndRemoveSandbox stops and removes the given pod sandbox.
 func (api *Client) StopAndRemoveSandbox(pod string) (err error) {
 	for attempt := 0; attempt < maxRemovalAttempts; attempt++ {
-		err = api.Runtime.StopPodSandbox(pod)
+		err = api.StopSandbox(pod)
 		if err != nil {
 			continue
 		}
-		err = api.Runtime.RemovePodSandbox(pod)
+		err = api.RemoveSandbox(pod)
 		if err != nil {
 			continue
 		}
@@ -191,7 +259,9 @@ func (api *Client) PullImage(image string, sandbox *runtimeapi.PodSandboxConfig)
 	imageSpec := &runtimeapi.ImageSpec{
 		Image: image,
 	}
-	_, err := api.Image.PullImage(imageSpec, nil, sandbox)
+	_, err := api.Image.PullImage(context.Background(), &runtimeapi.PullImageRequest{
+		Image: imageSpec,
+	})
 	if err != nil {
 		return err
 	}
@@ -205,14 +275,12 @@ func (api *Client) Close() {
 // NewClient instantiates a new API client.
 func NewClient(addr string) (*Client, error) {
 	logrus.WithField("addr", addr).Info("connecting to CRI endpoint")
-	runtimeSvc, err := remote.NewRemoteRuntimeService(addr, 10*time.Second)
+	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to connect")
+		return nil, errors.Wrap(err, "failed to dial")
 	}
-	imageSvc, err := remote.NewRemoteImageService(addr, 10*time.Second)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to connect")
-	}
+	runtimeSvc := runtimeapi.NewRuntimeServiceClient(conn)
+	imageSvc := runtimeapi.NewImageServiceClient(conn)
 	runtimeClient := &Client{
 		Runtime: runtimeSvc,
 		Image:   imageSvc,
