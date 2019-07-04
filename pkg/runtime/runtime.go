@@ -47,6 +47,14 @@ type Client struct {
 
 var defaultLinuxPodLabels = map[string]string{}
 
+func (api *Client) Version() string {
+	resp, err := api.Runtime.Version(context.Background(), &runtimeapi.VersionRequest{})
+	if err != nil {
+		return ""
+	}
+	return resp.Version
+}
+
 // CreateContainer runs a container image. It returns the container ID.
 func (api *Client) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, name, image string, command []string) (string, error) {
 	container := &runtimeapi.ContainerConfig{

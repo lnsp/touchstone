@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/lnsp/touchstone/pkg/runtime"
+	"github.com/lnsp/touchstone/pkg/util"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 )
 
@@ -18,6 +21,12 @@ var versionCmd = &cobra.Command{
 	Short: "Print the current version",
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Printf("touchstone %s\n", version)
+
+		client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
+		if err != nil {
+			logrus.WithError(err).Fatal("could not connect")
+		}
+		fmt.Println(client.Version())
 	},
 }
 
