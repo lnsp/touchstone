@@ -17,7 +17,7 @@ var benchmarkCmd = &cobra.Command{
 		defer outfile.Close()
 		matrix := &benchmark.Matrix{
 			CRIs:            []string{"containerd", "crio"},
-			RuntimeHandlers: []string{"runc"},
+			RuntimeHandlers: []string{"runc", "runsc"},
 			Suite: &benchmark.Suite{
 				&benchmark.Attempt{10, benchmark.SuiteStartupTime},
 				&benchmark.Attempt{1, benchmark.SuitePerformance},
