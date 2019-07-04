@@ -7,7 +7,7 @@ import (
 	"github.com/lnsp/touchstone/pkg/util"
 )
 
-var SuiteRawPower = BenchmarkSuite([]Benchmark{
+var SuitePerformance = Suite([]Benchmark{
 	&totalSysbenchCPUBenchmark{},
 })
 
@@ -48,7 +48,7 @@ func (bm *totalSysbenchCPUBenchmark) Run(client *runtime.Client, handler string)
 		return nil, err
 	}
 	// search for 'total time:'
-	totalTime, err := util.FindPrefixedLine(logs, "total time")
+	totalTime, err := util.FindPrefixedLine(logs, "total time:")
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse logs: %v", err)
 	}

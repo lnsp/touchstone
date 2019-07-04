@@ -8,7 +8,7 @@ import (
 )
 
 // SuiteStartupTime tests the startup times of different container setups.
-var SuiteStartupTime = BenchmarkSuite([]Benchmark{
+var SuiteStartupTime = Suite([]Benchmark{
 	&totalStartupTimeBenchmark{},
 })
 

@@ -43,6 +43,7 @@ const defaultNamespace = "touchstone"
 type Client struct {
 	Runtime runtimeapi.RuntimeServiceClient
 	Image   runtimeapi.ImageServiceClient
+	conn    *grpc.ClientConn
 }
 
 var defaultLinuxPodLabels = map[string]string{}
@@ -278,6 +279,7 @@ func (api *Client) PullImage(image string, sandbox *runtimeapi.PodSandboxConfig)
 
 func (api *Client) Close() {
 	// TODO: close TCP connections
+	api.conn.Close()
 }
 
 // NewClient instantiates a new API client.
@@ -292,6 +294,7 @@ func NewClient(addr string) (*Client, error) {
 	runtimeClient := &Client{
 		Runtime: runtimeSvc,
 		Image:   imageSvc,
+		conn:    conn,
 	}
 	return runtimeClient, nil
 }
