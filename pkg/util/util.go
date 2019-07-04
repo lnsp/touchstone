@@ -1,9 +1,11 @@
 package util
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"strings"
 )
 
 func GetCRIEndpoint(runtime string) string {
@@ -22,4 +24,15 @@ func GetOutputTarget(file string) io.WriteCloser {
 		}
 	}
 	return out
+}
+
+func FindPrefixedLine(data []byte, prefix string) (string, error) {
+	lines := strings.Split(string(data), "\n")
+	for _, l := range lines {
+		trimmed := strings.TrimSpace(l)
+		if strings.HasPrefix(trimmed, prefix) {
+			return strings.TrimSpace(strings.TrimPrefix(trimmed, prefix)), nil
+		}
+	}
+	return "", errors.New("not found")
 }
