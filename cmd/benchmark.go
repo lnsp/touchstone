@@ -19,8 +19,8 @@ var benchmarkCmd = &cobra.Command{
 		matrix := &benchmark.Matrix{
 			CRIs:  []string{"containerd", "crio"},
 			OCIs:  []string{"runc", "runsc"},
-			Items: suites.All,
-			Runs:  10,
+			Items: benchmark.Filter(suites.All, "performance"),
+			Runs:  1,
 		}
 		if err := matrix.Run(outfile); err != nil {
 			logrus.WithError(err).Error("error while running benchmark")
