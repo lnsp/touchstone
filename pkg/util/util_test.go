@@ -94,8 +94,8 @@ func TestFindPrefixedLine2(t *testing.T) {
 		execution time (avg/stddev):   10.0103/0.00
 	
 `)
-	expected := "0.09ms"
-	prefix := "min:"
+	expected := "10.0184s"
+	prefix := "total time:"
 	value := FindPrefixedLine(sysbenchOutput, prefix)
 	if value != expected {
 		t.Errorf("expected %s, got %s", expected, value)

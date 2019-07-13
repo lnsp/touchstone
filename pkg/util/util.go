@@ -45,6 +45,7 @@ func FindPrefixedLine(data []byte, prefix string) string {
 			return strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
 		}
 	}
+	fmt.Println(string(data))
 	logrus.Fatalf("failed to find %s", prefix)
 	return ""
 }
