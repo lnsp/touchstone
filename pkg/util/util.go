@@ -16,7 +16,7 @@ func ParseSeconds(s string) float64 {
 }
 
 func ParsePrefixedLine(data []byte, prefix string) float64 {
-	return FloatSeconds(FindPrefixedLine(data, prefix))
+	return ParseSeconds(FindPrefixedLine(data, prefix))
 }
 
 func GetCRIEndpoint(runtime string) string {
