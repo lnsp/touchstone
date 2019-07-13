@@ -55,16 +55,6 @@ func Filter(items []Benchmark, f string) []Benchmark {
 	return items[:i]
 }
 
-type sumError []error
-
-func (e sumError) Error() string {
-	s := ""
-	for _, err := range e {
-		s += err.Error() + "\n"
-	}
-	return s
-}
-
 type Matrix struct {
 	CRIs  []string
 	OCIs  []string
@@ -94,7 +84,6 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		return nil, fmt.Errorf("[%s:%s] failed to initialize client: %v", cri, handler, err)
 	}
 	defer client.Close()
-	errs := sumError(nil)
 	results := make([]MatrixResult, 0, len(m.Items))
 	for _, bm := range m.Items {
 		logrus.WithFields(logrus.Fields{
@@ -105,8 +94,7 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		for i := 0; i < m.Runs; i++ {
 			report, err := bm.Run(client, handler)
 			if err != nil {
-				errs = append(errs, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err))
-				break
+				return nil, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err)
 			}
 			reports = append(reports, report)
 			if aggregated != nil {
@@ -125,13 +113,12 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		CRI:     cri,
 		OCI:     handler,
 		Results: results,
-	}, errs
+	}, nil
 }
 
 func (m *Matrix) Run(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	errs := sumError(nil)
 	entries := make([]*MatrixEntry, 0, len(m.CRIs)*len(m.OCIs))
 	for _, cri := range m.CRIs {
 		for _, oci := range m.OCIs {
@@ -141,16 +128,15 @@ func (m *Matrix) Run(writer io.Writer) error {
 					"cri": cri,
 					"oci": oci,
 				}).Error("failed to evaluate entry")
-				errs = append(errs, err)
-				break
+				return err
 			}
 			entries = append(entries, entry)
 		}
 	}
 	if err := encoder.Encode(entries); err != nil {
-		errs = append(errs, err)
+		return err
 	}
-	return errs
+	return nil
 }
 
 type Suite []Benchmark
