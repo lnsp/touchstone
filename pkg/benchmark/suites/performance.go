@@ -83,8 +83,9 @@ func (CPUTime) Name() string {
 
 func (bm *CPUTime) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	logs, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test-cpu",
-		"run",
+		"sysbench", "--test=cpu",
+		"--cpu-max-prime=20000",
+		"--num-threads=1", "run",
 	})
 	if err != nil {
 		return nil, err
