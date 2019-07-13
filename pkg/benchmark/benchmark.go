@@ -137,6 +137,10 @@ func (m *Matrix) Run(writer io.Writer) error {
 		for _, oci := range m.OCIs {
 			entry, err := m.createEntry(cri, oci)
 			if err != nil {
+				logrus.WithError(err).WithFields(logrus.Fields{
+					"cri": cri,
+					"oci": oci,
+				}).Error("failed to evaluate entry")
 				errs = append(errs, err)
 				break
 			}
