@@ -103,7 +103,7 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		aggregated := Report(nil)
 		reports := make([]Report, 0, m.Runs)
 		for i := 0; i < m.Runs; i++ {
-			report, err := m.Items[i].Run(client, handler)
+			report, err := bm.Run(client, handler)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err))
 				break
