@@ -9,9 +9,9 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func FloatSeconds(s string) float64 {
+func ParseSeconds(s string) float64 {
 	var f float64
-	fmt.Sscanf(s, "%f", f)
+	fmt.Sscanf(s, "%f", &f)
 	return f
 }
 
