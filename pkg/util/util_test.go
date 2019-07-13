@@ -57,3 +57,47 @@ Threads fairness:
 		t.Errorf("expected %s, got %s", expected, value)
 	}
 }
+
+func TestFindPrefixedLine2(t *testing.T) {
+	sysbenchOutput := []byte(`sysbench 0.4.12:  multi-threaded system evaluation benchmark
+
+	Running the test with following options:
+	Number of threads: 1
+	
+	Doing memory operations speed test
+	Memory block size: 1024K
+	
+	Memory transfer size: 102400M
+	
+	Memory operations type: write
+	Memory scope type: global
+	Threads started!
+	Done.
+	
+	Operations performed: 102400 (10221.21 ops/sec)
+	
+	102400.00 MB transferred (10221.21 MB/sec)
+	
+	
+	Test execution summary:
+		total time:                          10.0184s
+		total number of events:              102400
+		total time taken by event execution: 10.0103
+		per-request statistics:
+			 min:                                  0.09ms
+			 avg:                                  0.10ms
+			 max:                                  1.53ms
+			 approx.  95 percentile:               0.13ms
+	
+	Threads fairness:
+		events (avg/stddev):           102400.0000/0.00
+		execution time (avg/stddev):   10.0103/0.00
+	
+`)
+	expected := "0.09ms"
+	prefix := "min:"
+	value := FindPrefixedLine(sysbenchOutput, prefix)
+	if value != expected {
+		t.Errorf("expected %s, got %s", expected, value)
+	}
+}
