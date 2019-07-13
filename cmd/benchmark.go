@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"github.com/lnsp/touchstone/pkg/benchmark"
+	"github.com/lnsp/touchstone/pkg/benchmark/suites"
 	"github.com/lnsp/touchstone/pkg/util"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -16,12 +17,10 @@ var benchmarkCmd = &cobra.Command{
 		outfile := util.GetOutputTarget(stdout)
 		defer outfile.Close()
 		matrix := &benchmark.Matrix{
-			CRIs:            []string{"containerd", "crio"},
-			RuntimeHandlers: []string{"runc", "runsc"},
-			Suite: &benchmark.Suite{
-				&benchmark.Attempt{10, benchmark.SuiteStartupTime},
-				&benchmark.Attempt{1, benchmark.SuitePerformance},
-			},
+			CRIs:  []string{"containerd", "crio"},
+			OCIs:  []string{"runc", "runsc"},
+			Items: suites.All,
+			Runs:  10,
 		}
 		if err := matrix.Run(outfile); err != nil {
 			logrus.WithError(err).Error("error while running benchmark")

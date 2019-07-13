@@ -11,40 +11,53 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type Attempt struct {
-	Count int
-	Suite Benchmark
+type Benchmark interface {
+	Name() string
+	Run(client *runtime.Client, handler string) (Report, error)
 }
 
-func (b *Attempt) Name() string {
-	return fmt.Sprintf("%s [%dx]", b.Suite.Name(), b.Count)
+type Report interface {
+	Aggregate(r Report) Report
+	Scale(n int) Report
 }
 
-func (b *Attempt) Run(client *runtime.Client, handler string) (interface{}, error) {
-	errs := make([]error, 0)
-	results := make([]interface{}, 0, b.Count)
-	for i := 0; i < b.Count; i++ {
-		logrus.WithFields(logrus.Fields{
-			"attempt": i,
-			"max":     b.Count,
-			"suite":   b.Suite.Name(),
-		}).Info("running benchmark attempt")
-		result, err := b.Suite.Run(client, handler)
-		if err != nil {
-			errs = append(errs, err)
-			continue
+type ValueReport map[string]float64
+
+func (report ValueReport) Aggregate(other Report) Report {
+	if report == nil {
+		return other
+	}
+	otherReport := other.(ValueReport)
+	result := make(map[string]float64)
+	for k := range report {
+		result[k] = report[k] + otherReport[k]
+	}
+	return ValueReport(result)
+}
+
+func (report ValueReport) Scale(n int) Report {
+	result := make(map[string]float64)
+	for k := range report {
+		result[k] = report[k] / float64(n)
+	}
+	return ValueReport(result)
+}
+
+// Filter operates in-place on a slice of benchmarks.
+func Filter(items []Benchmark, f string) []Benchmark {
+	i := 0
+	for j := range items {
+		if strings.HasPrefix(items[j].Name(), f) {
+			items[i] = items[j]
+			i++
 		}
-		results = append(results, result)
 	}
-	if len(errs) > 0 {
-		return nil, aggregatedError(errs)
-	}
-	return results, nil
+	return items[:i]
 }
 
-type aggregatedError []error
+type sumError []error
 
-func (e aggregatedError) Error() string {
+func (e sumError) Error() string {
 	s := ""
 	for _, err := range e {
 		s += err.Error() + "\n"
@@ -53,59 +66,80 @@ func (e aggregatedError) Error() string {
 }
 
 type Matrix struct {
-	CRIs            []string
-	RuntimeHandlers []string
-	Suite           Benchmark
+	CRIs  []string
+	OCIs  []string
+	Items []Benchmark
+	Runs  int
+}
+
+type MatrixEntry struct {
+	CRI     string         `json:"CRI"`
+	OCI     string         `json:"OCI"`
+	Results []MatrixResult `json:"Results"`
+}
+
+type MatrixResult struct {
+	Name       string   `json:"Name"`
+	Aggregated Report   `json:"Aggregated"`
+	Reports    []Report `json:"Reports"`
+}
+
+func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
+	logrus.WithFields(logrus.Fields{
+		"cri":     cri,
+		"handler": handler,
+	}).Info("running benchmark matrix entry")
+	client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
+	if err != nil {
+		return nil, fmt.Errorf("[%s:%s] failed to initialize client: %v", cri, handler, err)
+	}
+	defer client.Close()
+	errs := sumError(nil)
+	results := make([]MatrixResult, 0, len(m.Items))
+	for _, bm := range m.Items {
+		aggregated := Report(nil)
+		reports := make([]Report, 0, m.Runs)
+		for i := 0; i < m.Runs; i++ {
+			report, err := m.Items[i].Run(client, handler)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err))
+				break
+			}
+			reports = append(reports, report)
+			aggregated = aggregated.Aggregate(report)
+		}
+		results = append(results, MatrixResult{
+			Name:       bm.Name(),
+			Aggregated: aggregated,
+			Reports:    reports,
+		})
+	}
+	return &MatrixEntry{
+		CRI:     cri,
+		OCI:     handler,
+		Results: results,
+	}, errs
 }
 
 func (m *Matrix) Run(writer io.Writer) error {
 	encoder := json.NewEncoder(writer)
 	encoder.SetIndent("", "  ")
-	errs := make([]error, 0)
-
+	errs := sumError(nil)
+	entries := make([]*MatrixEntry, 0, len(m.CRIs)*len(m.OCIs))
 	for _, cri := range m.CRIs {
-		for _, handler := range m.RuntimeHandlers {
-			func() {
-				logrus.WithFields(logrus.Fields{
-					"cri":     cri,
-					"handler": handler,
-					"suite":   m.Suite.Name(),
-				}).Info("running benchmark matrix entry")
-				client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
-				if err != nil {
-					errs = append(errs, fmt.Errorf("(%s / %s): %v", cri, handler, err))
-					return
-				}
-				defer client.Close()
-				result, err := m.Suite.Run(client, handler)
-				if err != nil {
-					errs = append(errs, fmt.Errorf("(%s / %s): %v", cri, handler, err))
-					return
-				}
-				wrapper := struct {
-					CRI            string `json:"cri_endpoint"`
-					RuntimeHandler string `json:"runtime_handler"`
-					Result         interface{}
-				}{
-					CRI:            cri,
-					RuntimeHandler: handler,
-					Result:         result,
-				}
-				if err := encoder.Encode(wrapper); err != nil {
-					errs = append(errs, fmt.Errorf("(%s / %s): %v", cri, handler, err))
-				}
-			}()
+		for _, oci := range m.OCIs {
+			entry, err := m.createEntry(cri, oci)
+			if err != nil {
+				errs = append(errs, err)
+				break
+			}
+			entries = append(entries, entry)
 		}
 	}
-	if len(errs) > 0 {
-		return aggregatedError(errs)
+	if err := encoder.Encode(entries); err != nil {
+		errs = append(errs, err)
 	}
-	return nil
-}
-
-type Benchmark interface {
-	Name() string
-	Run(client *runtime.Client, handler string) (interface{}, error)
+	return errs
 }
 
 type Suite []Benchmark
@@ -134,7 +168,7 @@ func (bs Suite) Run(client *runtime.Client, handler string) (interface{}, error)
 	return reports, nil
 }
 
-// getBenchmarkID computes a unique string for this benchmark.
-func getBenchmarkID(b Benchmark) string {
-	return fmt.Sprintf("Benchmark-%s-%s", b.Name(), runtime.NewUUID())
+// ID computes a unique string for this benchmark.
+func ID(b Benchmark) string {
+	return fmt.Sprintf("benchmark.%s.%s", b.Name(), runtime.NewUUID())
 }

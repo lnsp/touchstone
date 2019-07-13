@@ -51,11 +51,8 @@ Threads fairness:
     execution time (avg/stddev):   10.0610/0.00
 `)
 	expected := "10.0634s"
-	prefix := "total time"
-	value, err := FindPrefixedLine(sysbenchOutput, prefix)
-	if err != nil {
-		t.Error("unexpected error while searching for prefixed line")
-	}
+	prefix := "total time:"
+	value := FindPrefixedLine(sysbenchOutput, prefix)
 	if value != expected {
 		t.Errorf("expected %s, got %s", expected, value)
 	}
