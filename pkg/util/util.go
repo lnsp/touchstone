@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"strings"
+
+	"github.com/Sirupsen/logrus"
 )
 
 func FloatSeconds(s string) float64 {
@@ -43,5 +45,6 @@ func FindPrefixedLine(data []byte, prefix string) string {
 			return strings.TrimSpace(strings.TrimPrefix(trimmed, prefix))
 		}
 	}
-	panic("not found")
+	logrus.Fatalf("failed to find %s", prefix)
+	return ""
 }
