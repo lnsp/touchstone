@@ -88,7 +88,7 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 	logrus.WithFields(logrus.Fields{
 		"cri":     cri,
 		"handler": handler,
-	}).Info("running benchmark matrix entry")
+	}).Info("evaluating matrix entry")
 	client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
 	if err != nil {
 		return nil, fmt.Errorf("[%s:%s] failed to initialize client: %v", cri, handler, err)
@@ -97,6 +97,9 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 	errs := sumError(nil)
 	results := make([]MatrixResult, 0, len(m.Items))
 	for _, bm := range m.Items {
+		logrus.WithFields(logrus.Fields{
+			"name": bm.Name(),
+		}).Info("running benchmark")
 		aggregated := Report(nil)
 		reports := make([]Report, 0, m.Runs)
 		for i := 0; i < m.Runs; i++ {
