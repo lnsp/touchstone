@@ -109,7 +109,11 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 				break
 			}
 			reports = append(reports, report)
-			aggregated = aggregated.Aggregate(report)
+			if aggregated != nil {
+				aggregated = aggregated.Aggregate(report)
+			} else {
+				aggregated = report
+			}
 		}
 		results = append(results, MatrixResult{
 			Name:       bm.Name(),
