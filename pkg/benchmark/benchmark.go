@@ -105,7 +105,7 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		}
 		results = append(results, MatrixResult{
 			Name:       bm.Name(),
-			Aggregated: aggregated,
+			Aggregated: aggregated.Scale(m.Runs),
 			Reports:    reports,
 		})
 	}
