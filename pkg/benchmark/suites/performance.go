@@ -67,10 +67,10 @@ func (bm *MemoryThroughput) Run(client *runtime.Client, handler string) (benchma
 		return nil, err
 	}
 	return benchmark.ValueReport{
-		"TotalOperations": util.ParsePrefixedLine(logs, "total operations:"),
-		"MinLatency":      util.ParsePrefixedLine(logs, "min:"),
-		"AvgLatency":      util.ParsePrefixedLine(logs, "avg:"),
-		"MaxLatency":      util.ParsePrefixedLine(logs, "max:"),
+		"TotalTime":  util.ParsePrefixedLine(logs, "total time:"),
+		"MinLatency": util.ParsePrefixedLine(logs, "min:"),
+		"AvgLatency": util.ParsePrefixedLine(logs, "avg:"),
+		"MaxLatency": util.ParsePrefixedLine(logs, "max:"),
 	}, nil
 }
 
