@@ -6,7 +6,7 @@ bin:
 	mkdir -p bin
 
 build: bin
-	go build -o bin/touchstone -ldflags="-X cmd.version=${GIT_COMMIT}"
+	go build -o bin/touchstone -ldflags="-X github.com/lnsp/touchstone/cmd.Version=dev-${GIT_COMMIT}"
 
 install:
 	cp bin/touchstone /usr/local/bin/touchstone

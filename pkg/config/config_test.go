@@ -2,16 +2,19 @@ package config
 
 import (
 	"io/ioutil"
-	"testing"
+	"os"
 	"reflect"
+	"testing"
 )
 
 func TestConfig(t *testing.T) {
 	tt := []struct {
+		Name    string
 		Content []byte
 		Config  *Config
 	}{
 		{
+			Name: "performance",
 			Content: []byte(`
 output: performance.yaml
 oci: ["runc", "runsc"]
@@ -32,23 +35,28 @@ scale: 1
 		},
 	}
 	for _, tc := range tt {
-		// write tmp file
-		tmpFile, err := ioutil.TempFile("", "config_test")
-		if err != nil {
-			t.Fatalf("could not create tmpfile: %v", err)
-		}
-		_, err = tmpFile.Write(tc.Content)
-		if err != nil {
-			t.Fatalf("could not write to tmpfile: %v", err)
-		}
-		tmpFile.Close()
-		cfg, err := Parse(tmpFile.Name())
-		if err != nil {
-			t.Fatalf("could not parse config: %v", err)
-		}
-		if !reflect.DeepEqual(cfg, tc.Config) {
-			t.Errorf("expected %v, got %v", tc.Config, cfg)
-		}
+		t.Run(tc.Name, func(t *testing.T) {
+			// write tmp file
+			tmpFile, err := ioutil.TempFile("", "config_test")
+			if err != nil {
+				t.Fatalf("could not create tmpfile: %v", err)
+			}
+			_, err = tmpFile.Write(tc.Content)
+			if err != nil {
+				t.Fatalf("could not write to tmpfile: %v", err)
+			}
+			tmpFile.Close()
+			cfg, err := Parse(tmpFile.Name())
+			if err != nil {
+				t.Fatalf("could not parse config: %v", err)
+			}
+			if !reflect.DeepEqual(cfg, tc.Config) {
+				t.Errorf("expected %v, got %v", tc.Config, cfg)
+			}
+			if err := os.Remove(tmpFile.Name()); err != nil {
+				t.Fatalf("could not remove tmpfile: %v", err)
+			}
+		})
 	}
 
 }

@@ -53,7 +53,15 @@ func (api *Client) Version() string {
 	if err != nil {
 		return ""
 	}
-	return resp.Version
+	return resp.RuntimeVersion
+}
+
+func (api *Client) Name() string {
+	resp, err := api.Runtime.Version(context.Background(), &runtimeapi.VersionRequest{})
+	if err != nil {
+		return ""
+	}
+	return resp.RuntimeName
 }
 
 // CreateContainer runs a container image. It returns the container ID.
@@ -284,7 +292,7 @@ func (api *Client) Close() {
 
 // NewClient instantiates a new API client.
 func NewClient(addr string) (*Client, error) {
-	logrus.WithField("addr", addr).Info("connecting to CRI endpoint")
+	logrus.WithField("addr", addr).Debug("connecting to CRI endpoint")
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to dial")

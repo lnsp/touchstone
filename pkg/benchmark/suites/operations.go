@@ -7,7 +7,9 @@ import (
 	"github.com/lnsp/touchstone/pkg/runtime"
 )
 
-var Operations []benchmark.Benchmark
+var Operations = []benchmark.Benchmark{
+	&ContainerLifecycle{},
+}
 
 type ContainerLifecycle struct{}
 

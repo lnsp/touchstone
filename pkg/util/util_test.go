@@ -23,7 +23,15 @@ func TestGetCRIEndpoint(t *testing.T) {
 }
 
 func TestFindPrefixedLine(t *testing.T) {
-	sysbenchOutput := []byte(`sysbench 0.4.12:  multi-threaded system evaluation benchmark
+	tt := []struct {
+		Name   string
+		Output []byte
+		Filter string
+		Value  string
+	}{
+		{
+			Name: "cpu",
+			Output: []byte(`sysbench 0.4.12:  multi-threaded system evaluation benchmark
 
 Running the test with following options:
 Number of threads: 1
@@ -49,17 +57,13 @@ Test execution summary:
 Threads fairness:
     events (avg/stddev):           10000.0000/0.00
     execution time (avg/stddev):   10.0610/0.00
-`)
-	expected := "10.0634s"
-	prefix := "total time:"
-	value := FindPrefixedLine(sysbenchOutput, prefix)
-	if value != expected {
-		t.Errorf("expected %s, got %s", expected, value)
-	}
-}
-
-func TestFindPrefixedLine2(t *testing.T) {
-	sysbenchOutput := []byte(`sysbench 0.4.12:  multi-threaded system evaluation benchmark
+`),
+			Value:  "10.0634s",
+			Filter: "total time:",
+		},
+		{
+			Name: "memory",
+			Output: []byte(`sysbench 0.4.12:  multi-threaded system evaluation benchmark
 
 	Running the test with following options:
 	Number of threads: 1
@@ -92,12 +96,17 @@ func TestFindPrefixedLine2(t *testing.T) {
 	Threads fairness:
 		events (avg/stddev):           102400.0000/0.00
 		execution time (avg/stddev):   10.0103/0.00
-	
-`)
-	expected := "10.0184s"
-	prefix := "total time:"
-	value := FindPrefixedLine(sysbenchOutput, prefix)
-	if value != expected {
-		t.Errorf("expected %s, got %s", expected, value)
+`),
+			Filter: "total time:",
+			Value:  "10.0184s",
+		},
+	}
+	for _, tc := range tt {
+		t.Run(tc.Name, func(t *testing.T) {
+			result := FindPrefixedLine(tc.Output, tc.Filter)
+			if result != tc.Value {
+				t.Errorf("expected %s, got %s", tc.Value, result)
+			}
+		})
 	}
 }
