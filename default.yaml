@@ -1,5 +1,0 @@
-cri: ["containerd"]
-oci: ["runc"]
-filter:
-- operations
-runs: 10
