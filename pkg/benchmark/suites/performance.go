@@ -9,6 +9,7 @@ import (
 var Performance = []benchmark.Benchmark{
 	&MemoryThroughput{},
 	&CPUTime{},
+	&DiskIO{},
 }
 
 const defaultSysbenchImage = "lnsp/sysbench:latest"
@@ -71,6 +72,73 @@ func (bm *MemoryThroughput) Run(client *runtime.Client, handler string) (benchma
 		"MinLatency": util.ParsePrefixedLine(logs, "min:"),
 		"AvgLatency": util.ParsePrefixedLine(logs, "avg:"),
 		"MaxLatency": util.ParsePrefixedLine(logs, "max:"),
+	}, nil
+}
+
+// DiskIO measures the total read/write speed.
+type DiskIO struct{}
+
+func (DiskIO) Name() string {
+	return "performance.disk.io"
+}
+
+func (bm *DiskIO) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
+	seqwr, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=seqwr",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	seqrewr, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=seqrewr",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	seqrd, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=seqrd",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	rndrd, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=rndrd",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	rndwr, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=rndwr",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	rndrw, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=rndrw",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return benchmark.ValueReport{
+		"SeqWrite":   util.ParsePrefixedLine(seqwr, "total time:"),
+		"SeqRewrite": util.ParsePrefixedLine(seqrewr, "total time:"),
+		"SeqRead":    util.ParsePrefixedLine(seqrd, "total time:"),
+		"RndRead":    util.ParsePrefixedLine(rndrd, "total time:"),
+		"RndWrite":   util.ParsePrefixedLine(rndwr, "total time:"),
+		"RndRwRead":  util.ParsePrefixedLine(rndrw, "total time:"),
+		"RndRwWrite": util.ParsePrefixedLine(rndrw, "total time:"),
 	}, nil
 }
 
