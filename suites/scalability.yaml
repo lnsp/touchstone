@@ -1,0 +1,6 @@
+cri: ["containerd"]
+oci: ["runc"]
+filter:
+- scalability
+runs: 1
+output: scalability.json
