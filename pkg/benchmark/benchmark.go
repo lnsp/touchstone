@@ -14,6 +14,7 @@ import (
 type Benchmark interface {
 	Name() string
 	Run(client *runtime.Client, handler string) (Report, error)
+	Labels() []string
 }
 
 type Report interface {
@@ -45,14 +46,28 @@ func (report ValueReport) Scale(n int) Report {
 
 // Filter operates in-place on a slice of benchmarks.
 func Filter(items []Benchmark, f string) []Benchmark {
+	logrus.WithField("itemCount", len(items)).Debug("filtering items")
 	i := 0
 	for j := range items {
 		if strings.HasPrefix(items[j].Name(), f) {
 			items[i] = items[j]
 			i++
+		} else {
+			logrus.WithField("name", items[j].Name()).Debug("filtered item")
 		}
 	}
 	return items[:i]
+}
+
+type Index map[string]IndexEntry
+
+func NewIndex() Index {
+	return make(Index)
+}
+
+type IndexEntry struct {
+	Labels   []string `json:"Labels"`
+	Datasets []int    `json:"Datasets"`
 }
 
 type Matrix struct {
@@ -72,6 +87,16 @@ type MatrixResult struct {
 	Name       string   `json:"Name"`
 	Aggregated Report   `json:"Aggregated"`
 	Reports    []Report `json:"Reports"`
+}
+
+func (m *Matrix) Index(index Index) {
+	for _, item := range m.Items {
+		logrus.WithField("report", item.Name()).Debug("indexing item")
+		index[item.Name()] = IndexEntry{
+			Labels:   item.Labels(),
+			Datasets: make([]int, 0),
+		}
+	}
 }
 
 func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {

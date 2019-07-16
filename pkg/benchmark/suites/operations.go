@@ -60,9 +60,13 @@ func (bm *ContainerLifecycle) Run(client *runtime.Client, handler string) (bench
 	}
 	endShutdown = time.Now()
 	return benchmark.ValueReport{
-		"Startup": endStartup.Sub(beginStartup).Seconds(),
-		"Create":  endSandbox.Sub(beginSandbox).Seconds(),
-		"Start":   endContainer.Sub(beginContainer).Seconds(),
-		"Destroy": endShutdown.Sub(beginShutdown).Seconds(),
+		"CreateAndRun": endStartup.Sub(beginStartup).Seconds(),
+		"Create":       endSandbox.Sub(beginSandbox).Seconds(),
+		"Run":          endContainer.Sub(beginContainer).Seconds(),
+		"Destroy":      endShutdown.Sub(beginShutdown).Seconds(),
 	}, nil
+}
+
+func (ContainerLifecycle) Labels() []string {
+	return []string{"Create", "Run", "Destroy", "CreateAndRun"}
 }

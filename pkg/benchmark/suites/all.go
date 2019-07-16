@@ -2,9 +2,8 @@ package suites
 
 import "github.com/lnsp/touchstone/pkg/benchmark"
 
-var All []benchmark.Benchmark
-
-func init() {
+func All() (All []benchmark.Benchmark) {
 	All = append(All, Performance...)
 	All = append(All, Operations...)
+	return All
 }

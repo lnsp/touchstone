@@ -22,7 +22,7 @@ type Config struct {
 }
 
 func (c *Config) Matrix() (*benchmark.Matrix, error) {
-	b := suites.All
+	b := suites.All()
 	for _, f := range c.Filter {
 		b = benchmark.Filter(b, f)
 	}

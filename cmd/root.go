@@ -12,6 +12,7 @@ import (
 
 var Version = "dev"
 
+var verbosity string
 var knownCRIs = []string{"containerd", "crio"}
 var rootCmd = &cobra.Command{
 	Use:   "touchstone",
@@ -34,9 +35,19 @@ var versionCmd = &cobra.Command{
 }
 
 func init() {
+	rootCmd.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		level, err := logrus.ParseLevel(verbosity)
+		if err != nil {
+			return err
+		}
+		logrus.SetLevel(level)
+		return nil
+	}
+	rootCmd.PersistentFlags().StringVarP(&verbosity, "verbosity", "v", logrus.InfoLevel.String(), "Log level")
 	rootCmd.AddCommand(versionCmd)
 	rootCmd.AddCommand(benchmarkCmd)
 	rootCmd.AddCommand(listCmd)
+	rootCmd.AddCommand(indexCmd)
 }
 
 // Execute runs the command executor.

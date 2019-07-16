@@ -75,6 +75,10 @@ func (bm *MemoryThroughput) Run(client *runtime.Client, handler string) (benchma
 	}, nil
 }
 
+func (MemoryThroughput) Labels() []string {
+	return []string{"TotalTime", "MinLatency", "AvgLatency", "MaxLatency"}
+}
+
 // DiskIO measures the total read/write speed.
 type DiskIO struct{}
 
@@ -142,6 +146,10 @@ func (bm *DiskIO) Run(client *runtime.Client, handler string) (benchmark.Report,
 	}, nil
 }
 
+func (DiskIO) Labels() []string {
+	return []string{"SeqWrite", "SeqRewrite", "SeqRead", "RndRead", "RndWrite", "RndRwRead", "RndRwWrite"}
+}
+
 // CPUTime measures the total time taken by a CPU heavy task.
 type CPUTime struct{}
 
@@ -161,4 +169,8 @@ func (bm *CPUTime) Run(client *runtime.Client, handler string) (benchmark.Report
 	return benchmark.ValueReport{
 		"TotalTime": util.ParsePrefixedLine(logs, "total time:"),
 	}, nil
+}
+
+func (CPUTime) Labels() []string {
+	return []string{"TotalTime"}
 }
