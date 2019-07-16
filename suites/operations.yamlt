@@ -1,0 +1,6 @@
+cri: ["containerd", "crio"]
+oci: ["runc", "runsc"]
+filter:
+- operations
+runs: 1
+output: operations.json

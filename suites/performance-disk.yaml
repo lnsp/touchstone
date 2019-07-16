@@ -1,6 +1,0 @@
-cri: ["containerd"]
-oci: ["runc"]
-filter:
-- performance.disk
-runs: 1
-output: disk.json

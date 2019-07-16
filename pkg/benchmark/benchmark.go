@@ -1,9 +1,7 @@
 package benchmark
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/lnsp/touchstone/pkg/runtime"
@@ -66,8 +64,8 @@ func NewIndex() Index {
 }
 
 type IndexEntry struct {
-	Labels   []string `json:"Labels"`
-	Datasets []int    `json:"Datasets"`
+	Labels   []string `json:"labels"`
+	Datasets []int    `json:"datasets"`
 }
 
 type Matrix struct {
@@ -78,15 +76,15 @@ type Matrix struct {
 }
 
 type MatrixEntry struct {
-	CRI     string         `json:"CRI"`
-	OCI     string         `json:"OCI"`
-	Results []MatrixResult `json:"Results"`
+	CRI     string         `json:"cri"`
+	OCI     string         `json:"oci"`
+	Results []MatrixResult `json:"results"`
 }
 
 type MatrixResult struct {
-	Name       string   `json:"Name"`
-	Aggregated Report   `json:"Aggregated"`
-	Reports    []Report `json:"Reports"`
+	Name       string   `json:"name"`
+	Aggregated Report   `json:"aggregated"`
+	Reports    []Report `json:"reports"`
 }
 
 func (m *Matrix) Index(index Index) {
@@ -99,14 +97,14 @@ func (m *Matrix) Index(index Index) {
 	}
 }
 
-func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
+func (m *Matrix) createEntry(cri string, handler string) (MatrixEntry, error) {
 	logrus.WithFields(logrus.Fields{
 		"cri":     cri,
 		"handler": handler,
 	}).Info("evaluating matrix entry")
 	client, err := runtime.NewClient(util.GetCRIEndpoint(cri))
 	if err != nil {
-		return nil, fmt.Errorf("[%s:%s] failed to initialize client: %v", cri, handler, err)
+		return MatrixEntry{}, fmt.Errorf("[%s:%s] failed to initialize client: %v", cri, handler, err)
 	}
 	defer client.Close()
 	results := make([]MatrixResult, 0, len(m.Items))
@@ -119,7 +117,7 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 		for i := 0; i < m.Runs; i++ {
 			report, err := bm.Run(client, handler)
 			if err != nil {
-				return nil, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err)
+				return MatrixEntry{}, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err)
 			}
 			reports = append(reports, report)
 			if aggregated != nil {
@@ -134,17 +132,15 @@ func (m *Matrix) createEntry(cri string, handler string) (*MatrixEntry, error) {
 			Reports:    reports,
 		})
 	}
-	return &MatrixEntry{
+	return MatrixEntry{
 		CRI:     cri,
 		OCI:     handler,
 		Results: results,
 	}, nil
 }
 
-func (m *Matrix) Run(writer io.Writer) error {
-	encoder := json.NewEncoder(writer)
-	encoder.SetIndent("", "  ")
-	entries := make([]*MatrixEntry, 0, len(m.CRIs)*len(m.OCIs))
+func (m *Matrix) Run() ([]MatrixEntry, error) {
+	entries := make([]MatrixEntry, 0, len(m.CRIs)*len(m.OCIs))
 	for _, cri := range m.CRIs {
 		for _, oci := range m.OCIs {
 			entry, err := m.createEntry(cri, oci)
@@ -153,15 +149,12 @@ func (m *Matrix) Run(writer io.Writer) error {
 					"cri": cri,
 					"oci": oci,
 				}).Error("failed to evaluate entry")
-				return err
+				return nil, err
 			}
 			entries = append(entries, entry)
 		}
 	}
-	if err := encoder.Encode(entries); err != nil {
-		return err
-	}
-	return nil
+	return entries, nil
 }
 
 type Suite []Benchmark
