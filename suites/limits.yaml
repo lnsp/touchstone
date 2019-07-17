@@ -1,6 +1,6 @@
 cri: ["containerd", "crio"]
 oci: ["runc", "runsc"]
 filter:
-- scalability
+- limits
 runs: 10
-output: scalability.json
+output: limits.json

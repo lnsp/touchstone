@@ -66,6 +66,10 @@ func (api *Client) Name() string {
 
 // CreateContainer runs a container image. It returns the container ID.
 func (api *Client) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, name, image string, command []string) (string, error) {
+	return api.CreateContainerWithResources(sandbox, pod, name, image, command, nil)
+}
+
+func (api *Client) CreateContainerWithResources(sandbox *runtimeapi.PodSandboxConfig, pod, name, image string, command []string, resources *runtimeapi.LinuxContainerResources) (string, error) {
 	container := &runtimeapi.ContainerConfig{
 		Metadata: &runtimeapi.ContainerMetadata{
 			Name:    name,
@@ -75,7 +79,9 @@ func (api *Client) CreateContainer(sandbox *runtimeapi.PodSandboxConfig, pod, na
 			Image: image,
 		},
 		LogPath: "/var/log/" + pod + "_" + name + ".log",
-		Linux:   &runtimeapi.LinuxContainerConfig{},
+		Linux: &runtimeapi.LinuxContainerConfig{
+			Resources: resources,
+		},
 	}
 	if command != nil {
 		container.Command = command
@@ -154,6 +160,15 @@ func (api *Client) Status(container string) (*runtimeapi.ContainerStatus, error)
 	return resp.Status, nil
 }
 
+// State fetches the state of the container.
+func (api *Client) State(container string) (runtimeapi.ContainerState, error) {
+	status, err := api.Status(container)
+	if err != nil {
+		return 0, err
+	}
+	return status.State, nil
+}
+
 // StartContainer starts a new container instance.
 func (api *Client) StartContainer(container string) error {
 	_, err := api.Runtime.StartContainer(context.Background(), &runtimeapi.StartContainerRequest{
@@ -181,6 +196,18 @@ func (api *Client) StopContainer(container string, timeout int) error {
 func (api *Client) RemoveContainer(container string) error {
 	_, err := api.Runtime.RemoveContainer(context.Background(), &runtimeapi.RemoveContainerRequest{
 		ContainerId: container,
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// UpdateContainerResources updates the Linux resources of the given container.
+func (api *Client) UpdateContainerResources(container string, resources *runtimeapi.LinuxContainerResources) error {
+	_, err := api.Runtime.UpdateContainerResources(context.Background(), &runtimeapi.UpdateContainerResourcesRequest{
+		ContainerId: container,
+		Linux:       resources,
 	})
 	if err != nil {
 		return err
