@@ -34,6 +34,18 @@ var tmpl = template.Must(template.New("").Parse(`
     <main class="container">
         <div id="data"></div>
         <script>
+			function median(arr) {
+				arr = arr.sort();
+				let size = arr.length;
+				let median = Math.floor(size / 2);
+				if (size == 1) return arr[0];
+				else if (size % 2 == 0) {
+					return (arr[median] + arrr[median+1]) / 2;
+				} else {
+					return arr[median];
+				}
+			}
+
             let dataContainer = document.getElementById("data");
             let datasets = {{ .Datasets }};
             let indices = {{ .Indices }};
@@ -41,16 +53,27 @@ var tmpl = template.Must(template.New("").Parse(`
             for (op of datasets) {
                 console.log("Indexing over " + op.cri + "/" + op.oci);
                 for (result of op.results) {
-                    let values = [];
+					// Generate index for median computation
+					let valueGroups = {};
+					for (label of indices[result.name].labels) {
+						valueGroups[label] = [];
+					}
+					// Aggregate values and sort them
+					for (report in result.reports) {
+						for (label in report) {
+							valueGroups[label].push(report[label]);
+						}
+					}
+					// Compute median
+                    let aggregated = [];
                     for (label of indices[result.name].labels) {
-                        values.push(result.aggregated[label]);
+                        aggregated.push(median(valueGroups[label]));
                     }
                     indices[result.name].datasets.push({
                         label: op.cri + "/" + op.oci,
-                        data: values,
+                        data: aggregated,
                         borderWidth: 1,
                     });
-                    console.log(values);
                 }
             }
 
