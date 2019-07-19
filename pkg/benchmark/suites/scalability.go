@@ -12,7 +12,6 @@ var Scalability = []benchmark.Benchmark{
 	&StartupScalability{Scale: 5},
 	&StartupScalability{Scale: 10},
 	&StartupScalability{Scale: 50},
-	&StartupScalability{Scale: 100},
 }
 
 type StartupScalability struct {
