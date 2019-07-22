@@ -69,10 +69,7 @@ var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List available benchmarks",
 	Run: func(cmd *cobra.Command, args []string) {
-		filtered := suites.All()
-		for _, filter := range listFilter {
-			filtered = benchmark.Filter(suites.All(), filter)
-		}
+		filtered := benchmark.Filter(suites.All(), listFilter)
 		for _, b := range filtered {
 			fmt.Println(b.Name())
 		}

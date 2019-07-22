@@ -43,16 +43,25 @@ func (report ValueReport) Scale(n int) Report {
 }
 
 // Filter operates in-place on a slice of benchmarks.
-func Filter(items []Benchmark, f string) []Benchmark {
+func Filter(items []Benchmark, filters []string) []Benchmark {
 	logrus.WithField("itemCount", len(items)).Debug("filtering items")
 	i := 0
 	for j := range items {
-		if strings.HasPrefix(items[j].Name(), f) {
+		found := false
+		name := items[j].Name()
+		for _, f := range filters {
+			if strings.HasPrefix(name, f) {
+				found = true
+				break
+			}
+		}
+		if found {
 			items[i] = items[j]
 			i++
 		} else {
 			logrus.WithField("name", items[j].Name()).Debug("filtered item")
 		}
+
 	}
 	return items[:i]
 }

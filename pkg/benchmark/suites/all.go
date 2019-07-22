@@ -6,5 +6,6 @@ func All() (All []benchmark.Benchmark) {
 	All = append(All, Performance...)
 	All = append(All, Operations...)
 	All = append(All, Scalability...)
+	All = append(All, Limits...)
 	return All
 }

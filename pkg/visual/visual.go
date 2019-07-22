@@ -50,6 +50,13 @@ var tmpl = template.Must(template.New("").Parse(`
             let datasets = {{ .Datasets }};
             let indices = {{ .Indices }};
 
+			let colors = {
+    			'containerd/runc': 'rgba(30,136,229,0.5)',
+    			'containerd/runsc': 'rgba(103,58,183,0.5)',
+    			'crio/runc': 'rgba(216,27,96,0.5)',
+    			'crio/runsc': 'rgba(244,67,54,0.5)',
+			};
+
             for (op of datasets) {
                 console.log("Indexing over " + op.cri + "/" + op.oci);
                 for (result of op.results) {
@@ -58,8 +65,9 @@ var tmpl = template.Must(template.New("").Parse(`
 					for (label of indices[result.name].labels) {
 						valueGroups[label] = [];
 					}
+                    console.log(valueGroups);
 					// Aggregate values and sort them
-					for (report in result.reports) {
+					for (report of result.reports) {
 						for (label in report) {
 							valueGroups[label].push(report[label]);
 						}
@@ -73,6 +81,7 @@ var tmpl = template.Must(template.New("").Parse(`
                         label: op.cri + "/" + op.oci,
                         data: aggregated,
                         borderWidth: 1,
+                        backgroundColor: colors[op.cri+'/'+op.oci],
                     });
                 }
             }
@@ -80,8 +89,15 @@ var tmpl = template.Must(template.New("").Parse(`
             for (name in indices) {
                 var root = document.createElement("p");
                 var header = document.createElement("h4");
+                header.classList.add("text-monospace");
+                var headerDesc = document.createElement("p");
+                headerDesc.classList.add("text-muted");
+                headerDesc.classList.add("lead");
+                headerDesc.appendChild(document.createTextNode(indices[name].description));
+
                 header.appendChild(document.createTextNode(name));
                 root.appendChild(header);
+                root.appendChild(headerDesc);
                 root.appendChild(document.createElement("hr"));
                 var canvas = document.createElement("canvas");
                 root.appendChild(canvas);
