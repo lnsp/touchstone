@@ -9,7 +9,8 @@ import (
 var Performance = []benchmark.Benchmark{
 	&MemoryThroughput{},
 	&CPUTime{},
-	&DiskIO{},
+	&DiskRead{},
+	&DiskWrite{},
 }
 
 const defaultSysbenchImage = "lnsp/sysbench:latest"
