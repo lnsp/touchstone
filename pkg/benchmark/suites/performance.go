@@ -79,14 +79,14 @@ func (MemoryThroughput) Labels() []string {
 	return []string{"TotalTime", "MinLatency", "AvgLatency", "MaxLatency"}
 }
 
-// DiskIO measures the total read/write speed.
-type DiskIO struct{}
+// DiskWrite measures the total read/write speed.
+type DiskWrite struct{}
 
-func (DiskIO) Name() string {
-	return "performance.disk.io"
+func (DiskWrite) Name() string {
+	return "performance.disk.write"
 }
 
-func (bm *DiskIO) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
+func (bm *DiskWrite) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	seqwr, err := RunInSysbench(bm, client, handler, []string{
 		"sysbench", "--test=fileio",
 		"--file-test-mode=seqwr",
@@ -103,6 +103,33 @@ func (bm *DiskIO) Run(client *runtime.Client, handler string) (benchmark.Report,
 	if err != nil {
 		return nil, err
 	}
+	rndwr, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=fileio",
+		"--file-test-mode=rndwr",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return benchmark.ValueReport{
+		"SeqWrite":   util.ParsePrefixedLine(seqwr, "total time:"),
+		"SeqRewrite": util.ParsePrefixedLine(seqrewr, "total time:"),
+		"RndWrite":   util.ParsePrefixedLine(rndwr, "total time:"),
+	}, nil
+}
+
+func (DiskWrite) Labels() []string {
+	return []string{"SeqWrite", "SeqRewrite", "RndWrite"}
+}
+
+// DiskRead measures the total read/write speed.
+type DiskRead struct{}
+
+func (DiskRead) Name() string {
+	return "performance.disk.read"
+}
+
+func (bm *DiskRead) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	seqrd, err := RunInSysbench(bm, client, handler, []string{
 		"sysbench", "--test=fileio",
 		"--file-test-mode=seqrd",
@@ -119,35 +146,14 @@ func (bm *DiskIO) Run(client *runtime.Client, handler string) (benchmark.Report,
 	if err != nil {
 		return nil, err
 	}
-	rndwr, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test=fileio",
-		"--file-test-mode=rndwr",
-		"--num-threads=1", "run",
-	})
-	if err != nil {
-		return nil, err
-	}
-	rndrw, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test=fileio",
-		"--file-test-mode=rndrw",
-		"--num-threads=1", "run",
-	})
-	if err != nil {
-		return nil, err
-	}
 	return benchmark.ValueReport{
-		"SeqWrite":   util.ParsePrefixedLine(seqwr, "total time:"),
-		"SeqRewrite": util.ParsePrefixedLine(seqrewr, "total time:"),
-		"SeqRead":    util.ParsePrefixedLine(seqrd, "total time:"),
-		"RndRead":    util.ParsePrefixedLine(rndrd, "total time:"),
-		"RndWrite":   util.ParsePrefixedLine(rndwr, "total time:"),
-		"RndRwRead":  util.ParsePrefixedLine(rndrw, "total time:"),
-		"RndRwWrite": util.ParsePrefixedLine(rndrw, "total time:"),
+		"SeqRead": util.ParsePrefixedLine(seqrd, "total time:"),
+		"RndRead": util.ParsePrefixedLine(rndrd, "total time:"),
 	}, nil
 }
 
-func (DiskIO) Labels() []string {
-	return []string{"SeqWrite", "SeqRewrite", "SeqRead", "RndRead", "RndWrite", "RndRwRead", "RndRwWrite"}
+func (DiskRead) Labels() []string {
+	return []string{"SeqRead", "RndRead"}
 }
 
 // CPUTime measures the total time taken by a CPU heavy task.
