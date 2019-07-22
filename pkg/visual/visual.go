@@ -40,7 +40,7 @@ var tmpl = template.Must(template.New("").Parse(`
 				let median = Math.floor(size / 2);
 				if (size == 1) return arr[0];
 				else if (size % 2 == 0) {
-					return (arr[median] + arrr[median+1]) / 2;
+					return (arr[median] + arr[median+1]) / 2;
 				} else {
 					return arr[median];
 				}
