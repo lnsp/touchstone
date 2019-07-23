@@ -88,6 +88,7 @@ var tmpl = template.Must(template.New("").Parse(`
                 }
             }
 
+			Chart.defaults.global.defaultFontFamily = "'American Typewriter', Helvetica, Arial'";
             for (name in indices) {
                 var root = document.createElement("p");
                 var header = document.createElement("h4");

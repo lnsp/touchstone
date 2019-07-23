@@ -4,6 +4,7 @@ import (
 	"github.com/lnsp/touchstone/pkg/benchmark"
 	"github.com/lnsp/touchstone/pkg/runtime"
 	"github.com/lnsp/touchstone/pkg/util"
+	"github.com/sirupsen/logrus"
 )
 
 var Performance = []benchmark.Benchmark{
@@ -51,6 +52,7 @@ func RunInSysbench(bm benchmark.Benchmark, client *runtime.Client, handler strin
 	if err := client.StopAndRemoveSandbox(pod); err != nil {
 		return nil, err
 	}
+	logrus.WithField("name", bm.Name()).Debugf("sysbench logs: %v", string(logs))
 	return logs, nil
 }
 
@@ -106,17 +108,13 @@ func (DiskRead) Name() string {
 
 func (bm *DiskRead) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	seqrd, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test=fileio",
-		"--file-test-mode=seqrd",
-		"--num-threads=1", "run",
+		"sh", "-c", "sysbench --test=fileio prepare && sysbench --test=fileio --file-test-mode=seqrd --num-threads=1 run",
 	})
 	if err != nil {
 		return nil, err
 	}
 	rndrd, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test=fileio",
-		"--file-test-mode=rndrd",
-		"--num-threads=1", "run",
+		"sh", "-c", "sysbench --test=fileio prepare && sysbench --test=fileio --file-test-mode=rndrd --num-threads=1 run",
 	})
 	if err != nil {
 		return nil, err
