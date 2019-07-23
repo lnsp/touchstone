@@ -1,0 +1,6 @@
+cri: ["containerd", "crio"]
+oci: ["runc"]
+filter:
+- limits.cpu.scaling
+runs: 10
+output: limits.json

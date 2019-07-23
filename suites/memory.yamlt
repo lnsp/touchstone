@@ -1,0 +1,6 @@
+cri: ["containerd", "crio"]
+oci: ["runc", "runsc"]
+filter:
+- performance.memory.total
+runs: 10
+output: performance.memory.json

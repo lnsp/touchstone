@@ -1,6 +1,6 @@
-cri: ["containerd", "crio"]
-oci: ["runc", "runsc"]
+cri: ["containerd"]
+oci: ["runsc"]
 filter:
-- limits
+- limits.cpu.time
 runs: 10
 output: limits.json

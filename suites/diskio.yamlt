@@ -1,0 +1,6 @@
+cri: ["containerd", "crio"]
+oci: ["runc", "runsc"]
+filter:
+- performance.disk.write
+runs: 10
+output: performance.disk.json

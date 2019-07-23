@@ -1,6 +1,6 @@
 cri: ["containerd", "crio"]
 oci: ["runc", "runsc"]
 filter:
-- operations
+- performance.cpu
 runs: 20
-output: operations.json
+output: performance.json
