@@ -110,7 +110,7 @@ func (CPULimits) Name() string {
 func (bm *CPULimits) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	logs, err := RunInSysbenchWithResources(bm, client, handler, []string{
 		"sysbench", "--test=cpu",
-		"--cpu-max-prime=10000",
+		"--cpu-max-prime=20000",
 		"--num-threads=1", "run",
 	}, &runtimeapi.LinuxContainerResources{
 		CpuPeriod: 100000,
@@ -137,15 +137,15 @@ func (CPUScalingLimits) Name() string {
 
 func (bm *CPUScalingLimits) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
 	resources := make([]*runtimeapi.LinuxContainerResources, 10)
-	for i := int64(1); i <= 10; i++ {
+	for i := 0; i < 10; i++ {
 		resources[i] = &runtimeapi.LinuxContainerResources{
 			CpuPeriod: 100000,
-			CpuQuota:  10000 * i,
+			CpuQuota:  10000 * int64(i+1),
 		}
 	}
 	logs, err := RunInSysbenchWithScalingResources(bm, client, handler, []string{
 		"sysbench", "--test=cpu",
-		"--cpu-max-prime=20000",
+		"--cpu-max-prime=5000",
 		"--num-threads=1", "run",
 	}, resources, time.Second)
 	if err != nil {

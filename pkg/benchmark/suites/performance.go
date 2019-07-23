@@ -7,7 +7,9 @@ import (
 )
 
 var Performance = []benchmark.Benchmark{
-	&MemoryThroughput{},
+	&MemoryTime{},
+	&MemoryMinAvgLatency{},
+	&MemoryMaxLatency{},
 	&CPUTime{},
 	&DiskRead{},
 	&DiskWrite{},
@@ -50,34 +52,6 @@ func RunInSysbench(bm benchmark.Benchmark, client *runtime.Client, handler strin
 		return nil, err
 	}
 	return logs, nil
-}
-
-// MemoryThroughput measures the total memory operations and min/avg/max memory latency.
-type MemoryThroughput struct{}
-
-func (MemoryThroughput) Name() string {
-	return "performance.memory.throughput"
-}
-
-func (bm *MemoryThroughput) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
-	logs, err := RunInSysbench(bm, client, handler, []string{
-		"sysbench", "--test=memory",
-		"--memory-block-size=1M", "--memory-total-size=100G",
-		"--num-threads=1", "run",
-	})
-	if err != nil {
-		return nil, err
-	}
-	return benchmark.ValueReport{
-		"TotalTime":  util.ParsePrefixedLine(logs, "total time:"),
-		"MinLatency": util.ParsePrefixedLine(logs, "min:"),
-		"AvgLatency": util.ParsePrefixedLine(logs, "avg:"),
-		"MaxLatency": util.ParsePrefixedLine(logs, "max:"),
-	}, nil
-}
-
-func (MemoryThroughput) Labels() []string {
-	return []string{"TotalTime", "MinLatency", "AvgLatency", "MaxLatency"}
 }
 
 // DiskWrite measures the total read/write speed.
@@ -180,4 +154,80 @@ func (bm *CPUTime) Run(client *runtime.Client, handler string) (benchmark.Report
 
 func (CPUTime) Labels() []string {
 	return []string{"TotalTime"}
+}
+
+// MemoryTime measures the total memory operation time.
+type MemoryTime struct{}
+
+func (MemoryTime) Name() string {
+	return "performance.memory.total"
+}
+
+func (bm *MemoryTime) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
+	logs, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=memory",
+		"--memory-block-size=1M", "--memory-total-size=100G",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return benchmark.ValueReport{
+		"TotalTime": util.ParsePrefixedLine(logs, "total time:"),
+	}, nil
+}
+
+func (MemoryTime) Labels() []string {
+	return []string{"TotalTime"}
+}
+
+// MemoryMinAvgLatency measures the total memory operations and min/avg/max memory latency.
+type MemoryMinAvgLatency struct{}
+
+func (MemoryMinAvgLatency) Name() string {
+	return "performance.memory.minavglatency"
+}
+
+func (bm *MemoryMinAvgLatency) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
+	logs, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=memory",
+		"--memory-block-size=1M", "--memory-total-size=1G",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return benchmark.ValueReport{
+		"MinLatency": util.ParsePrefixedLine(logs, "min:"),
+		"AvgLatency": util.ParsePrefixedLine(logs, "avg:"),
+	}, nil
+}
+
+func (MemoryMinAvgLatency) Labels() []string {
+	return []string{"MinLatency", "AvgLatency"}
+}
+
+// MemoryMaxLatency measures the total memory operation time.
+type MemoryMaxLatency struct{}
+
+func (MemoryMaxLatency) Name() string {
+	return "performance.memory.maxlatency"
+}
+
+func (bm *MemoryMaxLatency) Run(client *runtime.Client, handler string) (benchmark.Report, error) {
+	logs, err := RunInSysbench(bm, client, handler, []string{
+		"sysbench", "--test=memory",
+		"--memory-block-size=1M", "--memory-total-size=1G",
+		"--num-threads=1", "run",
+	})
+	if err != nil {
+		return nil, err
+	}
+	return benchmark.ValueReport{
+		"MaxLatency": util.ParsePrefixedLine(logs, "max:"),
+	}, nil
+}
+
+func (MemoryMaxLatency) Labels() []string {
+	return []string{"MaxLatency"}
 }

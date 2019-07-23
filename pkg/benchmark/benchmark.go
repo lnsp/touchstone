@@ -124,6 +124,10 @@ func (m *Matrix) createEntry(cri string, handler string) (MatrixEntry, error) {
 		aggregated := Report(nil)
 		reports := make([]Report, 0, m.Runs)
 		for i := 0; i < m.Runs; i++ {
+			logrus.WithFields(logrus.Fields{
+				"name":  bm.Name(),
+				"index": i,
+			}).Debug("benchmark attempt")
 			report, err := bm.Run(client, handler)
 			if err != nil {
 				return MatrixEntry{}, fmt.Errorf("[%s:%s] failed to run benchmark: %v", cri, handler, err)

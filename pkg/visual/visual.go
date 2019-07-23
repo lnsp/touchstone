@@ -25,8 +25,7 @@ var tmpl = template.Must(template.New("").Parse(`
     <header class="container mt-3">
         <div class="row">
             <div class="col">
-        <h1>touchstone</h1>
-        <h3 class="text-muted">benchmarking results</h3>
+        		<h1>Touchstone</h1>
             </div>
         </div>
         <hr>
@@ -34,13 +33,16 @@ var tmpl = template.Must(template.New("").Parse(`
     <main class="container">
         <div id="data"></div>
         <script>
+			function sort(arr) {
+				return arr.sort(function(a, b) { return a - b; });
+			}
 			function median(arr) {
-				arr = arr.sort();
+				arr = sort(arr);
 				let size = arr.length;
 				let median = Math.floor(size / 2);
 				if (size == 1) return arr[0];
 				else if (size % 2 == 0) {
-					return (arr[median] + arr[median+1]) / 2;
+					return (arr[median-1] + arr[median]) / 2;
 				} else {
 					return arr[median];
 				}
