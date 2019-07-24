@@ -140,7 +140,7 @@ func (bm *CPUScalingLimits) Run(client *runtime.Client, handler string) (benchma
 	for i := 0; i < 10; i++ {
 		resources[i] = &runtimeapi.LinuxContainerResources{
 			CpuPeriod: 100000,
-			CpuQuota:  10000 * int64(i+1),
+			CpuQuota:  50000 + 5000*int64(i+1),
 		}
 	}
 	logs, err := RunInSysbenchWithScalingResources(bm, client, handler, []string{
