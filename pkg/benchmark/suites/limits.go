@@ -145,7 +145,7 @@ func (bm *CPUScalingLimits) Run(client *runtime.Client, handler string) (benchma
 	}
 	logs, err := RunInSysbenchWithScalingResources(bm, client, handler, []string{
 		"sysbench", "--test=cpu",
-		"--cpu-max-prime=5000",
+		"--cpu-max-prime=20000",
 		"--num-threads=1", "run",
 	}, resources, time.Second)
 	if err != nil {
